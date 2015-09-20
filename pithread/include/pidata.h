@@ -3,11 +3,11 @@
  *
  * Esse arquivo pode ser modificado. ENTRETANTO, deve ser utilizada a TCB fornecida.
  *
- */
+ *
 #ifndef __pidata__
 #define __pidata__
 
-/* NÃO ALTERAR ESSA struct */
+/* NÃO ALTERAR ESSA struct *
 typedef struct TCB { 
 	int	tid; 			// identificador da thread
 	int	state;			// estado em que a thread se encontra
@@ -19,4 +19,4 @@ typedef struct TCB {
 	struct TCB 	*next; 		// ponteiro para o próximo TCB da lista
 } TCB_t; 
 
-#endif
+#endif*/

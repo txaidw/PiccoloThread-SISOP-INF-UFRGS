@@ -5,7 +5,7 @@
  * NÃO MODIFIQUE ESTE ARQUIVO.
  *
  * VERSÃO 1 - 17/08/2015
- */
+ *
 #ifndef __pithread__
 #define __pithread__
 
@@ -21,4 +21,4 @@ int pimutex_init(pimutex_t *mtx);
 int pilock (pimutex_t *mtx);
 int piunlock (pimutex_t *mtx);
 
-#endif
+#endif*/
