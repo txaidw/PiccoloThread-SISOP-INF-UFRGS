@@ -23,4 +23,9 @@ typedef struct TCB {
 	struct TCB 	*next; 		// ponteiro para o próximo TCB da lista
 } TCB_t; 
 
+typedef struct TCB_queue {
+  TCB_t* top;
+  TCB_t* bottom;
+} TCB_queue_t;
+
 #endif

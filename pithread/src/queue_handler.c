@@ -8,19 +8,43 @@
 #include <stdio.h>
 #include "../include/pidata.h"
 
-void queue_insert(TCB *queue_top, TCB *thread) {
-	TCB *temp_tcb = queue_top;
-	while (temp_tcb->prev != NULL) {
-		temp_tcb = temp_tcb->prev;
-	}
-	thread->next = temp_tcb;
-	temp_tcb->prev = thread;
+
+void queue_insert(TCB_queue_t *queue, TCB_t *new_tcb) {
+	new_tcb->prev = NULL;
+	new_tcb->next = NULL;
+ 
+    if (queue == NULL) {
+        printf("Queue not initialized\n");
+    } else if (queue->top == NULL && queue->bottom == NULL) {
+      queue->top = queue->bottom = new_tcb;
+    } else if (queue->top == NULL || queue->bottom == NULL) {
+        printf("Something is wrong... #1\n");
+    } else {
+      queue->bottom->next = new_tcb;
+      queue->bottom = new_tcb;
+    }
 }
+
 
 /*----------------------------------------------------------------------------*/
 
-TCB* queue_remove(TCB* queue_top) {
-	TCB *first = queue_top;
-	queue_top->prev->next = NULL;
-	return first;
+TCB_t* queue_remove(TCB_queue_t *queue) {
+ 
+  if ((queue == NULL) || (queue->top == NULL && queue->bottom == NULL)) {
+      printf("List is empty\n");
+      return NULL;
+  } else if (queue->top == NULL || queue->bottom == NULL) {
+      printf("Something is wrong... #2\n");
+      return NULL;
+  } else {
+
+    TCB_t *h = queue->top;
+    TCB_t *p = h->next;
+    
+    queue->top = p;
+    if (queue->top == NULL) {
+        queue->bottom = queue->top;
+    }
+    return h;
+    }
 }
