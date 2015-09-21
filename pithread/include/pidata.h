@@ -3,11 +3,15 @@
  *
  * Esse arquivo pode ser modificado. ENTRETANTO, deve ser utilizada a TCB fornecida.
  *
- *
+ */
+
+ #define _XOPEN_SOURCE 600 // Solves a OSX deprecated library problem of ucontext.h
+ #include <ucontext.h>
+
 #ifndef __pidata__
 #define __pidata__
 
-/* NÃO ALTERAR ESSA struct *
+/* NÃO ALTERAR ESSA struct */
 typedef struct TCB { 
 	int	tid; 			// identificador da thread
 	int	state;			// estado em que a thread se encontra
@@ -19,4 +23,4 @@ typedef struct TCB {
 	struct TCB 	*next; 		// ponteiro para o próximo TCB da lista
 } TCB_t; 
 
-#endif*/
+#endif

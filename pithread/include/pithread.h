@@ -5,7 +5,11 @@
  * NÃO MODIFIQUE ESTE ARQUIVO.
  *
  * VERSÃO 1 - 17/08/2015
- *
+ */
+
+ #define _XOPEN_SOURCE 600 // Solves a OSX deprecated library problem of ucontext.h
+ #include <ucontext.h>
+
 #ifndef __pithread__
 #define __pithread__
 
@@ -21,4 +25,4 @@ int pimutex_init(pimutex_t *mtx);
 int pilock (pimutex_t *mtx);
 int piunlock (pimutex_t *mtx);
 
-#endif*/
+#endif
