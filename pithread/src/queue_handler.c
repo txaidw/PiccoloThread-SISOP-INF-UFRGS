@@ -44,7 +44,6 @@ void queue_insert(TCB_queue_t **queue, TCB_t *new_tcb) {
 TCB_t* queue_remove(TCB_queue_t *queue) {
  
   if ((queue == NULL) || (queue->top == NULL && queue->bottom == NULL)) {
-      printf("List is empty\n");
       return NULL;
   } else if (queue->top == NULL || queue->bottom == NULL) {
       printf("Something is wrong... #2\n");
@@ -58,6 +57,8 @@ TCB_t* queue_remove(TCB_queue_t *queue) {
     if (queue->top == NULL) {
         queue->bottom = queue->top;
     }
+    h->prev = NULL;
+    h->next = NULL;
     return h;
     }
 }

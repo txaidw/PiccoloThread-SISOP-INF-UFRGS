@@ -5,8 +5,8 @@
  *
  */
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
  
 #include "../include/pidata.h"
 #include "queue_handler.c"
@@ -29,23 +29,29 @@ void insert_ready_active(TCB_t *thread, int position) {
 /*----------------------------------------------------------------------------*/
 
 TCB_t* get_ready_active() {
-	int priority = 2;
-	return queue_remove(ready_active[priority]);
+	int top_priority = MAX_THREAD_PRIORITY-1;
+	TCB_t *higher_priority_thread = NULL;
+	while(higher_priority_thread == NULL && top_priority >= 0){
+		higher_priority_thread = queue_remove(ready_active[top_priority]);
+		top_priority--;
+	}
+	return higher_priority_thread;
 }
 
 /*----------------------------------------------------------------------------*/
 
 void insert_ready_expired(TCB_t *thread, int position) {
 	int priority = thread->credCreate;
+	thread->credReal = priority;
 	queue_insert(&ready_expired[position], thread);
 }
 
 /*----------------------------------------------------------------------------*/
 
-TCB_t* get_ready_expired() {
-	int priority = 0;
-	return queue_remove(ready_expired[priority]);
-}
+// TCB_t* get_ready_expired() {
+// 	int priority = 0;
+// 	return queue_remove(ready_expired[priority]);
+// }
 
 
 /*----------------------------------------------------------------------------*/

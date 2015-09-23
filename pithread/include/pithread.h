@@ -7,8 +7,8 @@
  * VERSÃO 1 - 17/08/2015
  */
 
- #define _XOPEN_SOURCE 600 // Solves a OSX deprecated library problem of ucontext.h
- #include <ucontext.h>
+#define _XOPEN_SOURCE 600 // Solves a OSX deprecated library problem of ucontext.h
+#include <ucontext.h>
 
 #ifndef __pithread__
 #define __pithread__
