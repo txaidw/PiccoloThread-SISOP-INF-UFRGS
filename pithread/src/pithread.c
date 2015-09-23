@@ -20,6 +20,13 @@
 #define MTX_LOCKED 0
 #define MTX_UNLOCKED 1
 
+#define PI_CREATION 0
+#define PI_READY 1
+#define PI_EXEC 2
+#define PI_BLOCKED 3
+#define PI_FINISHED 4
+
+
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
@@ -38,20 +45,28 @@ void run_scheduler() {
 	// TODO
 }
 
+
+
+/*----------------------------------------------------------------------------*/
+/*                                  BLOCKING                                  */
+/*----------------------------------------------------------------------------*/
+
 void thread_block(TCB_t* thread) {
 	// TODO
 	if (thread != NULL) {
-		// thread->state = UTHREAD_BLOCKED;
+		thread->state = PI_BLOCKED;
 	}
+	run_scheduler();
 }
 
 void thread_unblock(TCB_t* thread) {
 	// TODO
 	if (thread != NULL) {
-		// remove_from_blocked_list(thread);
-		// push_ready(thread);
-		// thread->state = UTHREAD_READY;
+		remove_from_blocked_list(thread);
+		thread->state = PI_READY;
+		insert_ready_active(thread);
 	}
+	run_scheduler();
 }
 
 
@@ -112,8 +127,6 @@ int pilock (pimutex_t *mtx) {
 			//
 
 			thread_block(thread);
-			run_scheduler();
-
 			return SUCESS_CODE;
 		} else if(mtx->flag == MTX_UNLOCKED) {
 			// The resouce is NOT being used, so the thread is goint to use.
@@ -169,15 +182,15 @@ int main(int argc, char const *argv[]) {
 	TCB_t *um = (TCB_t*) malloc(sizeof(TCB_t));
 	um->tid = 1;
 
-	insert_ready_active(um, 1);
+	insert_ready_active(um);
 
 	TCB_t *dois = (TCB_t*) malloc(sizeof(TCB_t));
 	dois->tid = 2;
-	insert_ready_active(dois, 2);
+	insert_ready_active(dois);
 // 
 	TCB_t *tres = (TCB_t*) malloc(sizeof(TCB_t));
 	tres->tid = 3;
-	insert_ready_expired(tres, 3);
+	insert_ready_expired(tres);
 
 
 	TCB_t *cinco = (TCB_t*) malloc(sizeof(TCB_t));

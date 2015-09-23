@@ -21,9 +21,9 @@ TCB_queue_t *blocked_list;
 
 /*----------------------------------------------------------------------------*/
 
-void insert_ready_active(TCB_t *thread, int position) {
-	int priority = thread->credCreate;
-	queue_insert(&ready_active[position], thread);
+void insert_ready_active(TCB_t *thread) {
+	int newPriority = thread->credReal;
+	queue_insert(&ready_active[newPriority], thread);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -40,10 +40,9 @@ TCB_t* get_ready_active() {
 
 /*----------------------------------------------------------------------------*/
 
-void insert_ready_expired(TCB_t *thread, int position) {
+void insert_ready_expired(TCB_t *thread) {
 	int priority = thread->credCreate;
-	thread->credReal = priority;
-	queue_insert(&ready_expired[position], thread);
+	queue_insert(&ready_expired[priority], thread);
 }
 
 /*----------------------------------------------------------------------------*/

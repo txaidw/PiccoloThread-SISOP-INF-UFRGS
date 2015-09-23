@@ -28,13 +28,4 @@ typedef struct TCB_queue {
   TCB_t* bottom;
 } TCB_queue_t;
 
-enum Thread_State {
-        CREATION  = 0,
-        READY     = 1,
-        EXEC      = 2,
-        BLOCKED   = 3,
-        FINISHED  = 4
-};
-
-
 #endif
