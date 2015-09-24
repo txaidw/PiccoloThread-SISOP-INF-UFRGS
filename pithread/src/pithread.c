@@ -93,16 +93,16 @@ int piyield(void) {
 }
 
 int piwait(int tid) {
-	if ((queue_has_thread_with_id(ready_active, tid)  ||
-	    (queue_has_thread_with_id(ready_expired, tid) ||
-	    (queue_has_thread_with_id(blocked_list, tid)) {
+	// if ((queue_has_thread_with_id(ready_active, tid)  ||
+	//     (queue_has_thread_with_id(ready_expired, tid) ||
+	//     (queue_has_thread_with_id(blocked_list, tid)) {
 
-	    this_thread()->waiting_join = thread_id;
-		block_thread();
-		return run_scheduler();
-	} else {
-		return SUCESS_CODE;
-	}
+	//     // this_thread()->waiting_join = thread_id;
+	// 	// block_thread();
+	// 	return ERROR_CODE;//run_scheduler();
+	// } else {
+	// 	return SUCESS_CODE;
+	// }
 }
 
 
