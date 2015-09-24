@@ -21,14 +21,21 @@ TCB_queue_t *blocked_list;
 
 /*----------------------------------------------------------------------------*/
 
-void insert_ready_active(TCB_t *thread) {
+bool ready_active_is_empty() {
+	// TODO
+	return true;
+}
+
+/*----------------------------------------------------------------------------*/
+
+void ready_active_insert(TCB_t *thread) {
 	int newPriority = thread->credReal;
 	queue_insert(&ready_active[newPriority], thread);
 }
 
 /*----------------------------------------------------------------------------*/
 
-TCB_t* get_ready_active() {
+TCB_t* ready_active_remove_and_return() {
 	int top_priority = MAX_THREAD_PRIORITY-1;
 	TCB_t *higher_priority_thread = NULL;
 	while(higher_priority_thread == NULL && top_priority >= 0){
@@ -40,7 +47,7 @@ TCB_t* get_ready_active() {
 
 /*----------------------------------------------------------------------------*/
 
-void insert_ready_expired(TCB_t *thread) {
+void ready_expired_insert(TCB_t *thread) {
 	int priority = thread->credCreate;
 	queue_insert(&ready_expired[priority], thread);
 }
@@ -55,13 +62,13 @@ void insert_ready_expired(TCB_t *thread) {
 
 /*----------------------------------------------------------------------------*/
 
-void insert_in_blocked_list(TCB_t *thread) {
+void blocked_list_insert(TCB_t *thread) {
 	queue_insert(&blocked_list, thread);
 }
 
 /*----------------------------------------------------------------------------*/
 
-void remove_from_blocked_list(TCB_t *thread) {
+void blocked_list_remove(TCB_t *thread) {
 	remove_from_list(blocked_list, thread);
 }
 

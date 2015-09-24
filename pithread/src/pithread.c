@@ -41,9 +41,12 @@ TCB_t* this_thread() {
 	return NULL;
 }
 
-void run_scheduler() {
+int run_scheduler() {
 	// TODO
+	return ERROR_CODE;
 }
+
+
 
 
 
@@ -62,9 +65,9 @@ void thread_block(TCB_t* thread) {
 void thread_unblock(TCB_t* thread) {
 	// TODO
 	if (thread != NULL) {
-		remove_from_blocked_list(thread);
+		blocked_list_remove(thread);
 		thread->state = PI_READY;
-		insert_ready_active(thread);
+		ready_active_insert(thread);
 	}
 	run_scheduler();
 }
@@ -82,13 +85,24 @@ int picreate (int credCreate, void* (*start)(void*), void *arg) {
 }
 
 int piyield(void) {
-	// TODO
-	return -99;
+	if(!ready_active_is_empty()) {
+		return run_scheduler();
+	} else {
+		return SUCESS_CODE;
+	}
 }
 
 int piwait(int tid) {
-	// TODO
-	return -99;
+	if ((queue_has_thread_with_id(ready_active, tid)  ||
+	    (queue_has_thread_with_id(ready_expired, tid) ||
+	    (queue_has_thread_with_id(blocked_list, tid)) {
+
+	    this_thread()->waiting_join = thread_id;
+		block_thread();
+		return run_scheduler();
+	} else {
+		return SUCESS_CODE;
+	}
 }
 
 
@@ -182,24 +196,24 @@ int main(int argc, char const *argv[]) {
 	TCB_t *um = (TCB_t*) malloc(sizeof(TCB_t));
 	um->tid = 1;
 
-	insert_ready_active(um);
+	ready_active_insert(um);
 
 	TCB_t *dois = (TCB_t*) malloc(sizeof(TCB_t));
 	dois->tid = 2;
-	insert_ready_active(dois);
+	ready_active_insert(dois);
 // 
 	TCB_t *tres = (TCB_t*) malloc(sizeof(TCB_t));
 	tres->tid = 3;
-	insert_ready_expired(tres);
+	ready_expired_insert(tres);
 
 
 	TCB_t *cinco = (TCB_t*) malloc(sizeof(TCB_t));
 	cinco->tid = 5;
-	insert_in_blocked_list(cinco);
+	blocked_list_insert(cinco);
 
 	printAllQueues();
-	TCB_t *quatro = get_ready_active();
-	remove_from_blocked_list(cinco);
+	TCB_t *quatro = ready_active_remove_and_return();
+	blocked_list_remove(cinco);
 	printAllQueues();
 
 	pimutex_t *mutex = (pimutex_t *) malloc(sizeof(pimutex_t));

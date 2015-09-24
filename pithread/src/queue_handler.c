@@ -64,6 +64,29 @@ TCB_t* queue_remove(TCB_queue_t *queue) {
 }
 
 
+/*----------------------------------------------------------------------------*/
+
+bool queue_has_thread_with_id(TCB_queue_t *queue, int thread_id) {
+ 
+  if ((queue == NULL) || (queue->top == NULL && queue->bottom == NULL)) {
+      return false;
+  } else if (queue->top == NULL || queue->bottom == NULL) {
+      printf("Something is wrong... #7\n");
+      return false;
+  } else {
+
+    TCB_t *temp = queue->top;
+    
+    while(temp != NULL){
+      if(temp->tid == thread_id){
+        return true;
+      }
+      temp = temp->next;
+    }
+    return false;
+  }
+}
+
 
 
 /*----------------------------------------------------------------------------*/
