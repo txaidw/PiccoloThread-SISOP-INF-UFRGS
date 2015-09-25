@@ -54,11 +54,23 @@ void ready_expired_insert(TCB_t *thread) {
 
 /*----------------------------------------------------------------------------*/
 
-// TCB_t* get_ready_expired() {
-// 	int priority = 0;
-// 	return queue_remove(ready_expired[priority]);
-// }
+bool contains_tid_in_ready_queue(int tid) {
+	for (int i = 0; i < MAX_THREAD_PRIORITY; i++) {
+		if ((queue_has_thread_with_id(ready_active[i], tid)) ||
+			(queue_has_thread_with_id(ready_expired[i], tid))) {
+			return true;
+		}
+	}
+	return false;
+}
 
+bool contains_tid_in_blocked_list(int tid) {
+	if (queue_has_thread_with_id(blocked_list, tid)) {
+		return true;
+	} else {
+		return false;
+	}
+}
 
 /*----------------------------------------------------------------------------*/
 

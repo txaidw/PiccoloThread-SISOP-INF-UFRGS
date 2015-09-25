@@ -21,6 +21,9 @@ typedef struct TCB {
 	ucontext_t 	context;	// contexto de execução da thread (SP, PC, GPRs e recursos) 
 	struct TCB 	*prev; 		// ponteiro para o TCB anterior da lista
 	struct TCB 	*next; 		// ponteiro para o próximo TCB da lista
+
+	// TODO: This was not suppose to be here :[
+	int waiting_for_tid;
 } TCB_t; 
 
 typedef struct TCB_queue {

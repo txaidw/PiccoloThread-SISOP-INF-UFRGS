@@ -15,7 +15,7 @@
 
 
 /*----------------------------------------------------------------------------*/
-#define SUCESS_CODE 1
+#define SUCESS_CODE 0
 #define ERROR_CODE -1
 #define MTX_LOCKED 0
 #define MTX_UNLOCKED 1
@@ -48,6 +48,25 @@ int run_scheduler() {
 
 
 
+TCB_t* thread_blocked_waiting_for(int tid) {
+	TCB_queue_t *queue = blocked_list;
+  if ((queue == NULL) || (queue->top == NULL && queue->bottom == NULL)) {
+      return NULL;
+  } else if (queue->top == NULL || queue->bottom == NULL) {
+      printf("Something is wrong... #7\n");
+      return NULL;
+  } else {
+    TCB_t *temp = queue->top;
+    
+    while(temp != NULL) {
+      if (temp->waiting_for_tid == tid){
+        return temp;
+      }
+      temp = temp->next;
+    }
+    return NULL;
+  }
+}
 
 
 /*----------------------------------------------------------------------------*/
@@ -93,16 +112,14 @@ int piyield(void) {
 }
 
 int piwait(int tid) {
-	// if ((queue_has_thread_with_id(ready_active, tid)  ||
-	//     (queue_has_thread_with_id(ready_expired, tid) ||
-	//     (queue_has_thread_with_id(blocked_list, tid)) {
-
-	//     // this_thread()->waiting_join = thread_id;
-	// 	// block_thread();
-	// 	return ERROR_CODE;//run_scheduler();
-	// } else {
-	// 	return SUCESS_CODE;
-	// }
+	if (contains_tid_in_ready_queue(tid) || contains_tid_in_blocked_list(tid)) {
+	    TCB_t * thread = this_thread();
+	    thread->waiting_for_tid = tid;
+	    thread_block(thread);
+	    return run_scheduler();
+	} else {
+		return SUCESS_CODE;
+	}
 }
 
 
