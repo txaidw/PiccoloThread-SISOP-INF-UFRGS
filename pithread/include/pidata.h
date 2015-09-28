@@ -27,8 +27,8 @@ typedef struct TCB {
 } TCB_t; 
 
 typedef struct TCB_queue {
-  TCB_t* top;
-  TCB_t* bottom;
+  TCB_t* start;
+  TCB_t* end;
 } TCB_queue_t;
 
 #endif

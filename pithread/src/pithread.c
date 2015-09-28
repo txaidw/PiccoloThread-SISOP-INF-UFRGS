@@ -32,39 +32,108 @@
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
-
-// int make_new_id() {
-// 	int id = global_thread_id;
-// 	++global_thread_id;
-// 	return id;
-// }
+static int global_var_tid = 0;
 
 ucontext_t *scheduler_context;
 TCB_t *temp_scheduler;
 ucontext_t *ending_contex;
 
 
-TCB_t* this_thread() {
-	// TODO
-	return NULL;
+void piprintf(const char * format, ...) {
+	printf(format);
+}
+
+
+TCB_t* first_thread() {
+	TCB_t *first_thread = ready_active_return();
+	if (first_thread == NULL) {
+		piprintf("ERROR_CODE: first_thread == NULL\n");
+		return NULL;
+	} else {
+		return first_thread;
+	}
 }
 
 int run_scheduler() {
-	// TODO
-	return ERROR_CODE;
+	/* Remove current thread from the ready queue. */
+	TCB_t* running_thread = first_thread();
+
+	if (running_thread == NULL) {
+		return ERROR_CODE;
+	} else {
+		volatile bool already_swapped_context = false;
+
+
+		// Leaving the Execution
+		switch(running_thread->state) {
+			case PI_EXEC:
+				// uthread_debug("Sending thread %i to the end of the queue\n", thread->tid);
+				// thread->state = PI_READY;
+				// push_ready(thread);
+
+				// /* Save it's context. */
+				// code |= getcontext((thread->context));
+				piprintf("Thread is in execution\n");
+				/* When it returns, context will return right here. */
+				break;
+			case PI_FINISHED:
+				/* Thread is terminating, we need to deallocate it's memory. */
+				// uthread_debug("Deallocating memory for thread %i\n", thread->tid);
+
+				// free_thread(thread);
+				// thread = NULL;
+				piprintf("Thread need to be ended\n");
+				break;
+			case PI_BLOCKED: {
+				piprintf("[PI] Blocking thread with id: %d\n", running_thread->tid);
+				TCB_t *blocked = ready_active_remove_and_return();
+				blocked_list_insert(blocked);
+				getcontext(&(blocked->context));
+				break;
+			}
+			case PI_CREATION:
+				piprintf("[PI] First time the thread ran\n");
+				break;
+			case PI_READY:
+				piprintf("Thread wasnt running\n");
+				break;
+		}
+
+		// Back to Execution
+		if (!already_swapped_context) {
+			already_swapped_context = true;
+
+			TCB_t *back_thread = first_thread(); 
+
+			if (back_thread == NULL || back_thread->tid < 0) {
+				piprintf("[PI] ERROR_CODE: f_thread == NULL || f_thread->tid < 0\n");
+				return ERROR_CODE;
+			} else {
+				piprintf("[PI] Thread %i is active now\n", back_thread->tid);
+				back_thread->state = PI_EXEC;
+				getchar();
+        		setcontext(&(back_thread->context));
+        		printf("no");
+        		getchar();
+        		return SUCESS_CODE;
+			}
+		}
+
+		return SUCESS_CODE;
+	}
 }
 
 
 
 TCB_t* thread_blocked_waiting_for(int tid) {
 	TCB_queue_t *queue = blocked_list;
-  if ((queue == NULL) || (queue->top == NULL && queue->bottom == NULL)) {
+  if ((queue == NULL) || (queue->start == NULL && queue->end == NULL)) {
       return NULL;
-  } else if (queue->top == NULL || queue->bottom == NULL) {
-      printf("Something is wrong... #7\n");
+  } else if (queue->start == NULL || queue->end == NULL) {
+      piprintf("Something is wrong... #7\n");
       return NULL;
   } else {
-    TCB_t *temp = queue->top;
+    TCB_t *temp = queue->start;
 
     while(temp != NULL) {
       if (temp->waiting_for_tid == tid) {
@@ -83,12 +152,13 @@ TCB_t* thread_blocked_waiting_for(int tid) {
 /*                                  BLOCKING                                  */
 /*----------------------------------------------------------------------------*/
 
-void thread_block(TCB_t* thread) {
-	// TODO
+int thread_block(TCB_t* thread) {
 	if (thread != NULL) {
 		thread->state = PI_BLOCKED;
+		return run_scheduler();
+	} else {
+		return ERROR_CODE;
 	}
-	run_scheduler();
 }
 
 void thread_unblock(TCB_t* thread) {
@@ -147,7 +217,7 @@ TCB_t* allocate_thread() {
 		already_allocated = true;
         scheduler_context->uc_link = current_context;
 
-		/* Set that the allocator_context should begin at the
+		/* Set that the scheduler_context should begin at the
 		 * 'allocate_thread_private' function. */
         makecontext(scheduler_context, (void(*)(void))allocate_thread_private, 0);
 
@@ -159,13 +229,63 @@ TCB_t* allocate_thread() {
 
 /*----------------------------------------------------------------------------*/
 
+
+/*----------------------------------------------------------------------------*/
+
+void free_thread_private()
+{
+    // assert(temp_scheduler != NULL);
+    if (temp_scheduler != NULL) {
+	    // free(temp_scheduler->context->uc_stack.ss_sp);
+	    free(temp_scheduler);
+	    temp_scheduler = NULL;
+	} else {
+		piprintf("Already NULL");
+	}
+}
+
+/*----------------------------------------------------------------------------*/
+
+void free_thread(TCB_t* thread)
+{
+    ucontext_t *current_context;
+
+    volatile bool already_deallocated = false;
+    temp_scheduler = thread;
+
+
+	/* Save the current context. */
+    getcontext(current_context);
+
+    if (!already_deallocated)
+    {
+		/* Make it so it goes back to 'current_context' after it deallocates.
+		 * That way, it won't go inside this if anymore. */
+
+        already_deallocated = true;
+
+        scheduler_context->uc_link = current_context;
+
+		/* Set that the scheduler_context should begin at the
+		 * 'free_thread_private' function. */
+        makecontext(scheduler_context, (void(*)(void))free_thread_private, 0);
+
+        getchar();
+        setcontext(scheduler_context);
+        printf("no");
+        getchar();
+    }
+}
+
+
+
 /*----------------------------------------------------------------------------*/
 /*                                END THREAD                                  */
 /*----------------------------------------------------------------------------*/
 
 
 void end_thread_execution() {
-	TCB_t *thread = this_thread();
+	TCB_t *thread = first_thread();
 	thread->state = PI_FINISHED;
 
 	// Search for a thread that is waiting for this one to finish.
@@ -180,26 +300,6 @@ void end_thread_execution() {
 	}
 	run_scheduler();
 }
-
-
-
-// ucontext_t* create_new_context() {
-// 	ucontext_t *context = (ucontext_t *) malloc(sizeof(ucontext_t));
-
-// 	if (getcontext(context) != 0 || context == NULL) {
-// 		return NULL;
-// 	}
-
-// 	/* Allocate the stack */
-// 	context->uc_stack.ss_sp = (char *) malloc(SIGSTKSZ);
-// 	context->uc_stack.ss_size = SIGSTKSZ;
-
-// 	/* By default, it shouldn't return to any specified context. */
-// 	context->uc_link = NULL;
-
-// 	return context;
-// }
-
 
 int init_end_thread_context() {
 	ending_contex = (ucontext_t *) malloc(sizeof(ucontext_t));
@@ -217,13 +317,18 @@ int init_end_thread_context() {
 }
 
 
-void* create_main_thread(void* context) {
-	/* Set the current thread (which is the main one) with the context
-	 * passed to the function. */
-	TCB_t *main_thread = this_thread();
-	main_thread->context = *((ucontext_t *) context);
-	/* Set the thread's context, to make it go back to main. */
-	return (void *)setcontext(&main_thread->context);
+int init_main_thread() {
+	TCB_t *thread = (TCB_t*)malloc(sizeof(TCB_t));
+
+    thread->tid = global_var_tid;
+    thread->state = PI_CREATION;
+    thread->credCreate = thread->credReal = MAX_THREAD_PRIORITY;
+    thread->next = NULL;
+    thread->prev = NULL;
+	thread->waiting_for_tid = ERROR_CODE;
+	
+	ready_active_insert(thread);
+    return getcontext(&(thread->context));
 }
 
 
@@ -240,36 +345,18 @@ int internal_init(){
 		initialized = true;
 
 		if (init_end_thread_context() != SUCESS_CODE) {
+			piprintf("ERROR_CODE: init_end_thread_context");
+			return ERROR_CODE;
+		} else if(init_main_thread() != SUCESS_CODE) {
+			piprintf("ERROR_CODE: init_main_thread");
 			return ERROR_CODE;
 		} else {
-
-
-			if (getcontext(scheduler_context) != 0 || scheduler_context == NULL) {
-				return ERROR_CODE;
-			} else {
-
-				scheduler_context->uc_stack.ss_sp = (char *) malloc(SIGSTKSZ);
-				scheduler_context->uc_stack.ss_size = SIGSTKSZ;
-				scheduler_context->uc_link = NULL;
-
-
-				ucontext_t main_context;
-				volatile bool main_thread_created = false;
-
-				if (getcontext(&main_context) != 0) {
-					return ERROR_CODE;
-				} else {
-					if (!main_thread_created) {
-						main_thread_created = true;
-						// TODO: credits;
-						if (picreate(100, create_main_thread, (void*)&main_context) != SUCESS_CODE) {
-							return ERROR_CODE;
-						} else {
-							run_scheduler();
-						}
-					}
-				}
+			volatile bool main_thread_created = false;
+			if (!main_thread_created) {
+				main_thread_created = true;
+				run_scheduler();
 			}
+            return SUCESS_CODE;
 		}
 	} else {
 		return SUCESS_CODE;
@@ -281,27 +368,31 @@ int internal_init(){
 /*----------------------------------------------------------------------------*/
 
 int picreate (int credCreate, void* (*start)(void*), void *arg) {
+	int new_tid = ++global_var_tid;
+	piprintf("[PI] Creating new thread with tid: %d\n", new_tid);
 
-	uthread_t* thread = allocate_thread(); /* Allocate a new thread */
+	TCB_t *thread = (TCB_t*)malloc(sizeof(TCB_t));
 
-	thread->tid = get_new_id(); /* Assign a new id to it*/
-    thread->waiting_join = UTHREAD_INVALID_ID; /* It's not waiting for anybody
-											   to finish yet*/
+    thread->tid = new_tid;
+    thread->state = PI_CREATION;
+    thread->credCreate = thread->credReal = credCreate;
+    thread->next = NULL;
+    thread->prev = NULL;
+	thread->waiting_for_tid = ERROR_CODE;
+	
+    getcontext(&(thread->context));
+    if (((thread->context).uc_stack.ss_sp = malloc(SIGSTKSZ)) == NULL) {
+        printf("[PI ERROR]: No memory for stack allocation!");
+        return ERROR_CODE;
+    } else {
+	    (thread->context).uc_stack.ss_size = SIGSTKSZ;
+	//     (thread->context).uc_link = ending_contex;
+	    makecontext(&(thread->context),(void (*)(void))start, 0, arg);
+		
+		ready_active_insert(thread);
 
-    uthread_debug("Creating new thread with id %i\n", thread->tid);
-
-	/* Create it's context */
-	makecontext((thread->context),
-		(void (*) (void)) start_routine, 1, arg);
-
-	/* Put it to the end of the ready queue */
-	push_ready(thread);
-
-	thread->state = UTHREAD_INITIALIZING;
-
-
-	/* Return the newly created thread's id. */
-	return thread->tid;
+		return SUCESS_CODE;
+	}
 }
 
 int piyield(void) {
@@ -314,10 +405,9 @@ int piyield(void) {
 
 int piwait(int tid) {
 	if (contains_tid_in_ready_queue(tid) || contains_tid_in_blocked_list(tid)) {
-	    TCB_t * thread = this_thread();
+	    TCB_t * thread = first_thread();
 	    thread->waiting_for_tid = tid;
-	    thread_block(thread);
-	    return run_scheduler();
+	    return thread_block(thread);
 	} else {
 		return SUCESS_CODE;
 	}
@@ -348,14 +438,14 @@ int pilock (pimutex_t *mtx) {
 	if(mtx != NULL){
 		if (mtx->flag == MTX_LOCKED) {
 			// The resouce is ALREADY being used, so we must block the thread.
-			TCB_t *thread = this_thread();
+			TCB_t *thread = first_thread();
 			// TODO: confirm if this // will work..,
 			TCB_queue_t *tempQueue = (TCB_queue_t *) malloc(sizeof(TCB_queue_t));
-			tempQueue->top = mtx->first;
-			tempQueue->bottom = mtx->last;
+			tempQueue->start = mtx->first;
+			tempQueue->end = mtx->last;
 			queue_insert(&tempQueue, thread);
-			mtx->first = tempQueue->top;
-			mtx->last = tempQueue->bottom;
+			mtx->first = tempQueue->start;
+			mtx->last = tempQueue->end;
 			// free(tempQueue);
 			// tempQueue = NULL;
 			//
@@ -377,17 +467,17 @@ int pilock (pimutex_t *mtx) {
 /*----------------------------------------------------------------------------*/
 
 int piunlock (pimutex_t *mtx) {
-	if(mtx != NULL){
+	if (mtx != NULL){
 		if ((mtx->flag == MTX_LOCKED) && (mtx->first != NULL)) {
 			// Mutex is locked and there is threads on the blocked queue
 
 			// TODO: confirm if this // will work..,
 			TCB_queue_t *tempQueue = (TCB_queue_t *) malloc(sizeof(TCB_queue_t));
-			tempQueue->top = mtx->first;
-			tempQueue->bottom = mtx->last;
+			tempQueue->start = mtx->first;
+			tempQueue->end = mtx->last;
 			TCB_t *thread = queue_remove(tempQueue);
-			mtx->first = tempQueue->top;
-			mtx->last = tempQueue->bottom;
+			mtx->first = tempQueue->start;
+			mtx->last = tempQueue->end;
 			// free(tempQueue);
 			// tempQueue = NULL;
 			//
@@ -412,36 +502,9 @@ int piunlock (pimutex_t *mtx) {
 /*								     TESTS           						  */
 /*----------------------------------------------------------------------------*/
 
-int main(int argc, char const *argv[]) {
-	/* code */
 
-	TCB_t *um = (TCB_t*) malloc(sizeof(TCB_t));
-	um->tid = 1;
-
-	ready_active_insert(um);
-
-	TCB_t *dois = (TCB_t*) malloc(sizeof(TCB_t));
-	dois->tid = 2;
-	ready_active_insert(dois);
-//
-	TCB_t *tres = (TCB_t*) malloc(sizeof(TCB_t));
-	tres->tid = 3;
-	ready_expired_insert(tres);
-
-
-	TCB_t *cinco = (TCB_t*) malloc(sizeof(TCB_t));
-	cinco->tid = 5;
-	blocked_list_insert(cinco);
-
-	printAllQueues();
-	TCB_t *quatro = ready_active_remove_and_return();
-	blocked_list_remove(cinco);
-	printAllQueues();
-
-	pimutex_t *mutex = (pimutex_t *) malloc(sizeof(pimutex_t));
-	pimutex_init(mutex);
-
-	printf("\n%d", mutex->flag);
-
-	return 0;
-}
+// int main(int argc, char const *argv[]) {
+// 	/* code */
+// 	printf("LIB COMPILED SUCCESSFULLY\n");
+// 	return 0;
+// }

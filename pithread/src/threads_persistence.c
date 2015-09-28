@@ -7,8 +7,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
  
-#include "../include/pidata.h"
 #include "queue_handler.c"
 
 #define MAX_THREAD_PRIORITY 100
@@ -17,12 +17,14 @@
 TCB_queue_t *ready_active[MAX_THREAD_PRIORITY];
 TCB_queue_t *ready_expired[MAX_THREAD_PRIORITY];
 TCB_queue_t *blocked_list;
+
 /*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*/
 
 bool ready_active_is_empty() {
 	// TODO
+	printf("TODODODOD");
 	return true;
 }
 
@@ -30,7 +32,8 @@ bool ready_active_is_empty() {
 
 void ready_active_insert(TCB_t *thread) {
 	int newPriority = thread->credReal;
-	queue_insert(&ready_active[newPriority], thread);
+	assert(newPriority > 0);
+	queue_insert(&ready_active[newPriority-1], thread);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -38,18 +41,27 @@ void ready_active_insert(TCB_t *thread) {
 TCB_t* ready_active_remove_and_return() {
 	int top_priority = MAX_THREAD_PRIORITY-1;
 	TCB_t *higher_priority_thread = NULL;
-	while(higher_priority_thread == NULL && top_priority >= 0){
+	while (higher_priority_thread == NULL && top_priority >= 0) {
 		higher_priority_thread = queue_remove(ready_active[top_priority]);
 		top_priority--;
 	}
 	return higher_priority_thread;
 }
 
+TCB_t* ready_active_return() {
+	int top_priority = MAX_THREAD_PRIORITY-1;
+	TCB_t *higher_priority_thread = NULL;
+	while (higher_priority_thread == NULL && top_priority >= 0){
+		higher_priority_thread = queue_return(ready_active[top_priority]);
+		top_priority--;
+	}
+	return higher_priority_thread;
+}
 /*----------------------------------------------------------------------------*/
 
 void ready_expired_insert(TCB_t *thread) {
 	int priority = thread->credCreate;
-	queue_insert(&ready_expired[priority], thread);
+	queue_insert(&ready_expired[priority-1], thread);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -92,14 +104,14 @@ void blocked_list_remove(TCB_t *thread) {
 void printAllQueues() {
 	printf("\n                            START PRINTING QUEUES:\n");
 	printf("\n-> Ready-Active");
-	printf("\n                                                            -> Ready-Expired");
-	printf("\n                                                                                                                       -> Blocked-List");
+	printf("\n                          -> Ready-Expired");
+	printf("\n                                                   -> Blocked-List");
 	TCB_t *blocked_pointer = NULL;
-	if (blocked_list != NULL) { blocked_pointer = blocked_list->top; }
+	if (blocked_list != NULL) { blocked_pointer = blocked_list->start; }
 	for (int i = 0; i<MAX_THREAD_PRIORITY; i++) {
 		printf("\n[%02d]: ", i);
 		if (ready_active[i] != NULL) {
-			TCB_t *temp = ready_active[i]->top;
+			TCB_t *temp = ready_active[i]->start;
 			while(temp != NULL) {
 				printf("%d -:- ", temp->tid);
 				temp = temp->next;
@@ -109,9 +121,9 @@ void printAllQueues() {
 			printf("(not initialized)");
 		}
 
-		printf("\n                                                            [%02d]: ", i);
+		printf("\n                          [%02d]: ", i);
 		if (ready_expired[i] != NULL) {
-			TCB_t *temp = ready_expired[i]->top;
+			TCB_t *temp = ready_expired[i]->start;
 			while(temp != NULL) {
 				printf("%d -:- ", temp->tid);
 				temp = temp->next;
@@ -122,7 +134,7 @@ void printAllQueues() {
 		}
 
 
-		printf("\n                                                                                                                       [%02d]: ", i);
+		printf("\n                                                   [%02d]: ", i);
 		if (blocked_pointer != NULL) {
 			printf("%d -:- ", blocked_pointer->tid);
 			blocked_pointer = blocked_pointer->next;
@@ -131,4 +143,24 @@ void printAllQueues() {
 		}
 	}
 	printf("\nend;\n");
+}
+
+void pf() {
+	printf("\n");
+	TCB_t *blocked_pointer = NULL;
+	if (blocked_list != NULL) { blocked_pointer = blocked_list->start; }
+	while (blocked_pointer != NULL) {
+		printf("%d -:- ", blocked_pointer->tid);
+		blocked_pointer = blocked_pointer->next;
+	}
+}
+
+void pr() {
+	printf("\n");
+	TCB_t *blocked_pointer = NULL;
+	if (blocked_list != NULL) { blocked_pointer = blocked_list->end; }
+	while (blocked_pointer != NULL) {
+		printf("%d -:- ", blocked_pointer->tid);
+		blocked_pointer = blocked_pointer->prev;
+	}
 }
