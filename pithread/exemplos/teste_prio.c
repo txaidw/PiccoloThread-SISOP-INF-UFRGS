@@ -25,7 +25,7 @@ void *func(void *arg){
        vetor[inc] = (int)arg;
        inc++;
        if ( (inc % 20) == 0 )
-           syield();
+           piyield();
        else
            continue;
    }
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
         printf("%c", (char)vetor[i]);
     }
       
-    printf("\nConcluido vetor de letras com priuoridades...\n");
+    printf("\nConcluido vetor de letras com prioridades...\n");
     exit(0);
 }
 

@@ -10,6 +10,7 @@
 TCB_queue_t *ready_active[MAX_THREAD_PRIORITY];
 TCB_queue_t *ready_expired[MAX_THREAD_PRIORITY];
 TCB_queue_t *blocked_list;
+TCB_t *current_running_thread = NULL;
 
 /*----------------------------------------------------------------------------*/
 void initializeQueue(TCB_queue_t **queue) {
@@ -87,26 +88,27 @@ TCB_t* queue_return(TCB_queue_t *queue) {
 
 /*----------------------------------------------------------------------------*/
 
-bool queue_has_thread_with_id(TCB_queue_t *queue, int thread_id) {
+TCB_t* queue_thread_with_id(TCB_queue_t *queue, int thread_id) {
  
   if ((queue == NULL) || (queue->start == NULL && queue->end == NULL)) {
-      return false;
+      return NULL;
   } else if (queue->start == NULL || queue->end == NULL) {
       printf("Something is wrong... #7\n");
-      return false;
+      return NULL;
   } else {
 
     TCB_t *temp = queue->start;
     
     while(temp != NULL){
       if(temp->tid == thread_id){
-        return true;
+        return temp;
       }
       temp = temp->next;
     }
-    return false;
+    return NULL;
   }
 }
+
 
 TCB_t* thread_blocked_waiting_for(int tid) {
 	TCB_queue_t *queue = blocked_list;
@@ -171,10 +173,26 @@ bool remove_from_list(TCB_queue_t *list, TCB_t *thread) {
 }
 /*----------------------------------------------------------------------------*/
 
+bool queue_is_empty(TCB_queue_t *queue) {
+  if ((queue == NULL) ||
+     (queue->start == NULL && queue->end == NULL)) {
+      return true;
+  } else if (queue->start == NULL || queue->end == NULL) {
+      printf("Something is wrong... #7\n");
+      return false;
+  } else {
+      return false;
+  }
+}
+
 bool ready_active_is_empty() {
-	// TODO
-	printf("TODODODOD");
-	return true;
+  int i;
+  for (i = 0; i < MAX_THREAD_PRIORITY; i++) {
+    if (queue_is_empty(ready_active[i]) == false) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -221,8 +239,8 @@ void ready_expired_insert(TCB_t *thread) {
 bool contains_tid_in_ready_queue(int tid) {
   int i;
 	for (i = 0; i < MAX_THREAD_PRIORITY; i++) {
-		if ((queue_has_thread_with_id(ready_active[i], tid)) ||
-			(queue_has_thread_with_id(ready_expired[i], tid))) {
+		if ( queue_thread_with_id(ready_active[i], tid) != NULL ||
+		     queue_thread_with_id(ready_expired[i], tid) != NULL ) {
 			return true;
 		}
 	}
@@ -230,7 +248,7 @@ bool contains_tid_in_ready_queue(int tid) {
 }
 
 bool contains_tid_in_blocked_list(int tid) {
-	if (queue_has_thread_with_id(blocked_list, tid)) {
+	if ( queue_thread_with_id(blocked_list, tid) != NULL ) {
 		return true;
 	} else {
 		return false;

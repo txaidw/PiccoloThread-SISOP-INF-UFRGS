@@ -15,7 +15,23 @@
 #ifndef __pidata__
 #define __pidata__
 
+/*----------------------------------------------------------------------------*/
 #define MAX_THREAD_PRIORITY 100
+
+#define SUCESS_CODE 0
+#define ERROR_CODE -1
+#define MTX_LOCKED 0
+#define MTX_UNLOCKED 1
+
+#define PI_CREATION 0
+#define PI_READY 1
+#define PI_EXEC 2
+#define PI_BLOCKED 3
+#define PI_FINISHED 4
+
+#define PIPRINT(X) printf X
+
+/*----------------------------------------------------------------------------*/
 
 /* NÃO ALTERAR ESSA struct */
 typedef struct TCB { 

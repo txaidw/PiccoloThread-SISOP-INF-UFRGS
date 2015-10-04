@@ -24,6 +24,7 @@ int pimutex_init(pimutex_t *mtx);
 int pilock (pimutex_t *mtx);
 int piunlock (pimutex_t *mtx);
 
-int internal_init();
+void printAllQueues();
+
 
 #endif
