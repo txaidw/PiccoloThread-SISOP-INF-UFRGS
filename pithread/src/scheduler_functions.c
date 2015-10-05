@@ -96,8 +96,8 @@ void end_thread_execution() {
 		TCB_t *waiting_thread = thread_blocked_waiting_for(runnig_tid);
 		// There was a thread waiting for it to finish
 		if (waiting_thread != NULL) {
-			waiting_thread->waiting_for_tid = ERROR_CODE;
-			
+
+			blocked_tid_list_remove(waiting_thread->tid);
 			blocked_list_wait_remove(waiting_thread);
 			waiting_thread->state = PI_READY;
 

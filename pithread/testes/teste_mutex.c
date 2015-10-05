@@ -18,7 +18,7 @@ void func0(void *arg) {
 }
 
 void func1(void *arg) {
-        printf("Eu sou a thread ID1 imprimindo %d e entrando na pilock\n", *((int *)arg));
+    printf("Eu sou a thread ID1 imprimindo %d e entrando na pilock\n", *((int *)arg));
 
     pilock(&mut);
     teste = teste + 1;
@@ -31,7 +31,7 @@ void func1(void *arg) {
 }
 
 void func2(void *arg) {
-        printf("Eu sou a thread ID2 imprimindo %d e entrando na pilock\n", *((int *)arg));
+    printf("Eu sou a thread ID2 imprimindo %d e entrando na pilock\n", *((int *)arg));
 
     pilock(&mut);
     teste = teste + 1;
@@ -44,7 +44,7 @@ void func2(void *arg) {
 }
 
 void func3(void *arg) {
-        printf("Eu sou a thread ID3 imprimindo %d e entrando na pilock\n", *((int *)arg));
+    printf("Eu sou a thread ID3 imprimindo %d e entrando na pilock\n", *((int *)arg));
 
     pilock(&mut);
     teste = teste + 1;
@@ -57,7 +57,6 @@ void func3(void *arg) {
 }
 
 int main(int argc, char *argv[]) {
-
     int id0, id1, id2, id3;
     int i = 0;
 

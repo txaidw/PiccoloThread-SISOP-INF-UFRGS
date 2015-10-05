@@ -64,7 +64,6 @@ int init_main_thread() {
 	thread->credCreate = thread->credReal = MAX_THREAD_PRIORITY;
 	thread->next = NULL;
 	thread->prev = NULL;
-	thread->waiting_for_tid = ERROR_CODE;
 	
 	if (((thread->context).uc_stack.ss_sp = malloc(SIGSTKSZ)) == NULL) {
 		printf("[PI ERROR]: No memory for stack allocation!");
@@ -115,7 +114,6 @@ int picreate(int credCreate, void* (*start)(void*), void *arg) {
 	thread->state = PI_CREATION;
 	thread->credCreate = thread->credReal = credCreate;
 	thread->next = NULL;thread->prev = NULL;
-	thread->waiting_for_tid = ERROR_CODE;
 	
 	getcontext(&(thread->context));
 	
@@ -152,7 +150,10 @@ int piwait(int tid) {
 	internal_init();
 
 	if (contains_tid_in_ready_queue(tid)) { // Thread Exist
-	    current_running_thread->waiting_for_tid = tid;
+		TCB_waiting_t *entry = (TCB_waiting_t *) malloc(sizeof(TCB_waiting_t));
+		entry->blocked_thread_id = current_running_thread->tid;
+		entry->waiting_for_thread_id = tid;
+		blocked_tid_list_insert(entry);
 	    current_running_thread->state = PI_BLOCKED;
 	    blocked_list_wait_insert(current_running_thread);
 	    return run_scheduler();
@@ -230,10 +231,11 @@ int pilock(pimutex_t *mtx) {
 ///
 int piunlock(pimutex_t *mtx) {
 	internal_init();
-	PIPRINT(("[PI] MUTEX UNLOCKED\n"));
+	PIPRINT(("[PI] MUTEX UNLOCKING: "));
 	if (mtx != NULL){
 		if ((mtx->flag == MTX_LOCKED) && (mtx->first != NULL)) {
 			// Mutex is locked and there is threads on the blocked queue
+			PIPRINT(("Now Unlocking\n"));
 
 			TCB_queue_t *tempQueue = (TCB_queue_t *) malloc(sizeof(TCB_queue_t));
 			tempQueue->start = mtx->first;
@@ -260,6 +262,8 @@ int piunlock(pimutex_t *mtx) {
 
 		if ((mtx->first == NULL) && (mtx->last == NULL)) {
 			// Zero threads on the blocked queue
+			PIPRINT(("Already unlocked\n"));
+
 			mtx->flag = MTX_UNLOCKED;
 		}
 

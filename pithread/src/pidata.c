@@ -9,8 +9,9 @@
 
 TCB_queue_t *ready_active[MAX_THREAD_PRIORITY];
 TCB_queue_t *ready_expired[MAX_THREAD_PRIORITY];
-TCB_queue_t *blocked_list;
 TCB_queue_t *blocked_list_mutex;
+TCB_queue_t *blocked_list_waiting;
+TCB_waiting_t *blocked_tid_list;
 TCB_t *current_running_thread = NULL;
 
 /*----------------------------------------------------------------------------*/
@@ -43,7 +44,41 @@ void queue_insert(TCB_queue_t **queue, TCB_t *new_tcb) {
     }
 }
 
+void blocked_tid_list_insert(TCB_waiting_t *entry) {
+  if(blocked_tid_list == NULL) {
+      blocked_tid_list = entry;       
+  } else {
+    TCB_waiting_t *node = blocked_tid_list;
+    
+    while(node->next != NULL) {
+      node = node->next;
+    }
+    node->next = entry;
+  }
+}
 
+void blocked_tid_list_remove(int blocked_id) {
+
+  if(blocked_tid_list == NULL) {
+      blocked_tid_list = NULL;       
+  } else {
+    TCB_waiting_t *node = blocked_tid_list;
+    TCB_waiting_t *prev = NULL;
+    
+    while(node != NULL) {
+        if (node->blocked_thread_id == blocked_id) {
+            if (prev == NULL) {
+                blocked_tid_list = node->next;
+            } else {
+                prev->next = node->next;
+            }
+            free(node);
+        }
+        prev = node;
+        node = node->next;
+    }
+  }
+}
 /*----------------------------------------------------------------------------*/
 
 TCB_t* queue_remove(TCB_queue_t *queue) {
@@ -108,34 +143,43 @@ TCB_t* queue_thread_with_id(TCB_queue_t *queue, int thread_id) {
 
 
 TCB_t* thread_blocked_waiting_for(int tid) {
-	TCB_queue_t *queue = blocked_list;
-  if ((queue == NULL) || (queue->start == NULL && queue->end == NULL)) {
-      return NULL;
-  } else if (queue->start == NULL || queue->end == NULL) {
-      printf("Something is wrong... #7\n");
-      return NULL;
-  } else {
-    TCB_t *temp = queue->start;
 
-    while(temp != NULL) {
-      if (temp->waiting_for_tid == tid) {
-        return temp;
+  if(blocked_tid_list == NULL) {
+      return NULL;       
+  } else {
+    TCB_waiting_t *node = blocked_tid_list;
+    int found_tid = -1;
+    while(node != NULL) {
+      if (node->waiting_for_thread_id == tid) {
+        found_tid = node->blocked_thread_id;
+        return queue_thread_with_id(blocked_list_waiting, found_tid);
       }
-      temp = temp->next;
+      node = node->next;
     }
     return NULL;
   }
+
+
+
+
+
+
+
+
+
+
+
 }
 
 /*----------------------------------------------------------------------------*/
 
 void list_remove(TCB_queue_t *list, TCB_t *node) {
+    printf("CHEGOU\n");
     if(node == list->start && node == list->end) {
         list->start = NULL;
         list->end = NULL;
     } else if(node == list->start) {
         list->start = node->next;
-        list->start->prev = NULL;
     } else if (node == list->end) {
         list->end = node->prev;
         list->end->next = NULL;
@@ -278,7 +322,7 @@ bool contains_tid_in_ready_queue(int tid) {
 }
 
 bool contains_tid_in_blocked_list(int tid) {
-	if ( queue_thread_with_id(blocked_list, tid) != NULL ) {
+	if (queue_thread_with_id(blocked_list_waiting, tid) != NULL ) {
 		return true;
 	} else {
 		return false;
@@ -293,18 +337,18 @@ void blocked_list_mutex_insert(TCB_t *thread) {
 
 
 void blocked_list_mutex_remove(TCB_t *thread) {
-  remove_from_list(&blocked_list_mutex, thread);
+  remove_from_list(blocked_list_mutex, thread);
 }
 
 
 void blocked_list_wait_insert(TCB_t *thread) {
-	queue_insert(&blocked_list, thread);
+	queue_insert(&blocked_list_waiting, thread);
 }
 
 /*----------------------------------------------------------------------------*/
 
 void blocked_list_wait_remove(TCB_t *thread) {
-	remove_from_list(blocked_list, thread);
+	remove_from_list(blocked_list_waiting, thread);
 }
 
 
@@ -318,7 +362,7 @@ void printAllQueues() {
 	printf("\n                          -> Ready-Expired");
 	printf("\n                                                   -> Blocked-List");
 	TCB_t *blocked_pointer = NULL;
-	if (blocked_list != NULL) { blocked_pointer = blocked_list->start; }
+	if (blocked_list_waiting != NULL) { blocked_pointer = blocked_list_waiting->start; }
 	int i;
   for (i = 0; i<MAX_THREAD_PRIORITY; i++) {
 		printf("\n[%02d]: ", i);
@@ -360,7 +404,7 @@ void printAllQueues() {
 void pf() {
 	printf("\n");
 	TCB_t *blocked_pointer = NULL;
-	if (blocked_list != NULL) { blocked_pointer = blocked_list->start; }
+	if (blocked_list_waiting != NULL) { blocked_pointer = blocked_list_waiting->start; }
 	while (blocked_pointer != NULL) {
 		printf("%d -:- ", blocked_pointer->tid);
 		blocked_pointer = blocked_pointer->next;
@@ -370,7 +414,7 @@ void pf() {
 void pr() {
 	printf("\n");
 	TCB_t *blocked_pointer = NULL;
-	if (blocked_list != NULL) { blocked_pointer = blocked_list->end; }
+	if (blocked_list_waiting != NULL) { blocked_pointer = blocked_list_waiting->end; }
 	while (blocked_pointer != NULL) {
 		printf("%d -:- ", blocked_pointer->tid);
 		blocked_pointer = blocked_pointer->prev;
