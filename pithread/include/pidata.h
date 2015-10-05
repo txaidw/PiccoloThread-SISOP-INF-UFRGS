@@ -59,8 +59,8 @@ typedef struct TCB_queue {
 void queue_insert(TCB_queue_t **queue, TCB_t *new_tcb);
 TCB_t* queue_remove(TCB_queue_t *queue);
 bool ready_active_is_empty();
-void ready_active_insert(TCB_t *thread);
-TCB_t* ready_active_remove_and_return();
+void ready_queue_insert(TCB_t *thread);
+TCB_t* ready_queue_remove_and_return();
 TCB_t* ready_active_return();
 void ready_expired_insert(TCB_t *thread);
 TCB_t* thread_blocked_waiting_for(int tid);

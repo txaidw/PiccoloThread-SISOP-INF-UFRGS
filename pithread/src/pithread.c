@@ -72,7 +72,7 @@ int init_main_thread() {
 	} else {
 		(thread->context).uc_stack.ss_size = SIGSTKSZ;
 		(thread->context).uc_link = NULL;
-		ready_active_insert(thread);
+		ready_queue_insert(thread);
 		getcontext(&(thread->context));
 		return SUCESS_CODE;
 	}
@@ -126,7 +126,7 @@ int picreate(int credCreate, void* (*start)(void*), void *arg) {
 		(thread->context).uc_stack.ss_size = SIGSTKSZ;
 		(thread->context).uc_link = ending_contex;
 		makecontext(&(thread->context), (void (*)(void))start, 1, arg);
-		ready_active_insert(thread);
+		ready_queue_insert(thread);
 		return new_tid;
 	}
 }
@@ -136,7 +136,7 @@ int picreate(int credCreate, void* (*start)(void*), void *arg) {
 int piyield(void) {
 	internal_init();
 
-	if(!ready_active_is_empty()) {
+	if(!ready_queue_is_empty()) {
 		printf("Yield :)\n");
 		return run_scheduler();
 	} else {
@@ -153,7 +153,9 @@ int piwait(int tid) {
 
 	if (contains_tid_in_ready_queue(tid)) { // Thread Exist
 	    current_running_thread->waiting_for_tid = tid;
-	    return thread_block(current_running_thread);
+	    current_running_thread->state = PI_BLOCKED;
+	    blocked_list_wait_insert(current_running_thread);
+	    return run_scheduler();
 	} else {
 		return SUCESS_CODE;
 	}
@@ -174,40 +176,45 @@ int pimutex_init(pimutex_t *mtx) {
 	// Initializing mutex
 	internal_init();
 
-	if(mtx != NULL){
-		mtx->flag = false;
-		mtx->first = NULL;
-		mtx->last = NULL;
-		return SUCESS_CODE;
-	} else {
-		return ERROR_CODE;
+	if(mtx == NULL) {
+		mtx = (pimutex_t *) malloc(sizeof(pimutex_t));
 	}
+	
+	mtx->flag = MTX_UNLOCKED;
+	mtx->first = NULL;
+	mtx->last = NULL;
+	return SUCESS_CODE;
 }
 
 
 ///
 ///
-int pilock (pimutex_t *mtx) {
+int pilock(pimutex_t *mtx) {
 	internal_init();
+	PIPRINT(("[PI] MUTEX LOCKING: "));
 	if(mtx != NULL){
 		if (mtx->flag == MTX_LOCKED) {
 			// The resouce is ALREADY being used, so we must block the thread.
+			PIPRINT(("Already locked\n"));
 
-			// TODO: confirm if this // will work..,
 			TCB_queue_t *tempQueue = (TCB_queue_t *) malloc(sizeof(TCB_queue_t));
 			tempQueue->start = mtx->first;
 			tempQueue->end = mtx->last;
 			queue_insert(&tempQueue, current_running_thread);
 			mtx->first = tempQueue->start;
 			mtx->last = tempQueue->end;
-			// free(tempQueue);
-			// tempQueue = NULL;
-			//
+			tempQueue->start = NULL;
+			tempQueue->end = NULL;
+			free(tempQueue);
+			tempQueue = NULL;
 
-			thread_block(current_running_thread);
-			return SUCESS_CODE;
+
+	    	current_running_thread->state = PI_BLOCKED;
+	    	blocked_list_mutex_insert(current_running_thread);
+	    	return run_scheduler();
 		} else if(mtx->flag == MTX_UNLOCKED) {
 			// The resouce is NOT being used, so the thread is goint to use.
+			PIPRINT(("Now locked\n"));
 			mtx->flag = MTX_LOCKED;
 			return SUCESS_CODE;
 		} else {
@@ -221,24 +228,34 @@ int pilock (pimutex_t *mtx) {
 
 ///
 ///
-int piunlock (pimutex_t *mtx) {
+int piunlock(pimutex_t *mtx) {
 	internal_init();
+	PIPRINT(("[PI] MUTEX UNLOCKED\n"));
 	if (mtx != NULL){
 		if ((mtx->flag == MTX_LOCKED) && (mtx->first != NULL)) {
 			// Mutex is locked and there is threads on the blocked queue
 
-			// TODO: confirm if this // will work..,
 			TCB_queue_t *tempQueue = (TCB_queue_t *) malloc(sizeof(TCB_queue_t));
 			tempQueue->start = mtx->first;
 			tempQueue->end = mtx->last;
 			TCB_t *thread = queue_remove(tempQueue);
 			mtx->first = tempQueue->start;
 			mtx->last = tempQueue->end;
-			// free(tempQueue);
-			// tempQueue = NULL;
-			//
+			tempQueue->start = NULL;
+			tempQueue->end = NULL;
+			free(tempQueue);
+			tempQueue = NULL;
+			
 
-			thread_unblock(thread);
+			blocked_list_mutex_remove(thread);
+			thread->state = PI_READY;
+			
+			PIPRINT(("[PI]: Thread (%d) receive #20 credits\n", thread->tid));
+			int cred = thread->credReal;
+			cred = cred+20;
+			thread->credReal = (cred < 100 ? cred : 100);
+			
+			ready_queue_insert(thread);
 		}
 
 		if ((mtx->first == NULL) && (mtx->last == NULL)) {
@@ -248,6 +265,7 @@ int piunlock (pimutex_t *mtx) {
 
 		return SUCESS_CODE;
 	} else {
+		PIPRINT(("[PI ERROR]: Mutex unlock error"));
 		return ERROR_CODE;
 	}
 }

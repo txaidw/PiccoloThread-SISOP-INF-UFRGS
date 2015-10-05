@@ -10,6 +10,7 @@
 TCB_queue_t *ready_active[MAX_THREAD_PRIORITY];
 TCB_queue_t *ready_expired[MAX_THREAD_PRIORITY];
 TCB_queue_t *blocked_list;
+TCB_queue_t *blocked_list_mutex;
 TCB_t *current_running_thread = NULL;
 
 /*----------------------------------------------------------------------------*/
@@ -39,10 +40,6 @@ void queue_insert(TCB_queue_t **queue, TCB_t *new_tcb) {
       (*queue)->start->prev = new_tcb;
       new_tcb->next = (*queue)->start;
       (*queue)->start = new_tcb;
-      printf("||: ");
-      if (new_tcb->prev) printf("%d ", new_tcb->prev->tid);
-      printf("<- %d ", new_tcb->tid);
-      if (new_tcb->next) printf("-> %d\n", new_tcb->next->tid);
     }
 }
 
@@ -163,7 +160,7 @@ bool remove_from_list(TCB_queue_t *list, TCB_t *thread) {
     TCB_t *temp = list->start;
     while(temp != NULL) {  
       if (temp == thread) {  /* Found it. */
-        list_remove(list, thread);
+        list_remove(list, temp);
         return true;
       }
       temp = temp->next;
@@ -185,10 +182,11 @@ bool queue_is_empty(TCB_queue_t *queue) {
   }
 }
 
-bool ready_active_is_empty() {
+bool ready_queue_is_empty() {
   int i;
   for (i = 0; i < MAX_THREAD_PRIORITY; i++) {
-    if (queue_is_empty(ready_active[i]) == false) {
+    if ((queue_is_empty(ready_active[i]) == false) ||
+        (queue_is_empty(ready_expired[i]) == false)) {
       return false;
     }
   }
@@ -197,26 +195,58 @@ bool ready_active_is_empty() {
 
 /*----------------------------------------------------------------------------*/
 
-void ready_active_insert(TCB_t *thread) {
-	int newPriority = thread->credReal;
-	if (newPriority > 0) {
-		queue_insert(&ready_active[newPriority-1], thread);
-	} else {
-		printf("[PI ERROR]: Invalid Proirity");
-	}
+void ready_queue_insert(TCB_t *thread) {
+  int newPriority = thread->credReal;
+  if (newPriority == 0) {
+    // Should be added on the expired queue;
+    thread->credReal = thread->credCreate;
+    queue_insert(&ready_expired[thread->credCreate-1], thread);
+  } else if (newPriority > 0) {
+    // Should be added on the ready queue;
+    queue_insert(&ready_active[newPriority-1], thread);
+  } else {
+    PIPRINT(("[PI ERROR]: Invalid Proirity"));
+  }
 }
 
 /*----------------------------------------------------------------------------*/
 
-TCB_t* ready_active_remove_and_return() {
+void swap_queues() {
+  int i;
+  for (i = 0; i < MAX_THREAD_PRIORITY; i++) {
+    TCB_t *thread = queue_remove(ready_expired[i]);
+    while(thread != NULL) {
+        queue_insert(&ready_active[i], thread);
+        thread = queue_remove(ready_expired[i]);
+    }
+  }
+}
+
+
+TCB_t* ready_queue_remove_and_return() {
+
 	int top_priority = MAX_THREAD_PRIORITY-1;
 	TCB_t *higher_priority_thread = NULL;
 	while (higher_priority_thread == NULL && top_priority >= 0) {
 		higher_priority_thread = queue_remove(ready_active[top_priority]);
 		top_priority--;
 	}
+
+  if (higher_priority_thread == NULL) {
+    printf("[PI] Will swap queues\n");
+    swap_queues();
+
+    top_priority = MAX_THREAD_PRIORITY-1;
+    while (higher_priority_thread == NULL && top_priority >= 0) {
+      higher_priority_thread = queue_remove(ready_active[top_priority]);
+      top_priority--;
+    }
+  }
 	return higher_priority_thread;
 }
+
+
+
 
 TCB_t* ready_active_return() {
 	int top_priority = MAX_THREAD_PRIORITY-1;
@@ -257,13 +287,23 @@ bool contains_tid_in_blocked_list(int tid) {
 
 /*----------------------------------------------------------------------------*/
 
-void blocked_list_insert(TCB_t *thread) {
+void blocked_list_mutex_insert(TCB_t *thread) {
+  queue_insert(&blocked_list_mutex, thread);
+}
+
+
+void blocked_list_mutex_remove(TCB_t *thread) {
+  remove_from_list(&blocked_list_mutex, thread);
+}
+
+
+void blocked_list_wait_insert(TCB_t *thread) {
 	queue_insert(&blocked_list, thread);
 }
 
 /*----------------------------------------------------------------------------*/
 
-void blocked_list_remove(TCB_t *thread) {
+void blocked_list_wait_remove(TCB_t *thread) {
 	remove_from_list(blocked_list, thread);
 }
 

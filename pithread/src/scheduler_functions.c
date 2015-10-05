@@ -11,7 +11,7 @@
 
 
 TCB_t* get_new_thread() {
-	TCB_t *first_thread = ready_active_remove_and_return();
+	TCB_t *first_thread = ready_queue_remove_and_return();
 	if (first_thread == NULL) {
 		PIPRINT(("ERROR_CODE: first_thread == NULL\n"));
 		return NULL;
@@ -26,22 +26,28 @@ int run_scheduler() {
 	/* Remove current thread from the ready queue. */
 	volatile bool already_swapped_context = false;
 
-
 	// Leaving the Execution
 	if (current_running_thread != NULL) {
 		// There is a thread active
 		switch(current_running_thread->state) {
-			case PI_EXEC:
-				PIPRINT(("[PI] [SC]: After Yeild: Thread is in execution\n"));
-				ready_active_insert(current_running_thread);
+			case PI_EXEC: {
+				/// current_running_thread was executing but now should be
+				/// re-inserted on the ready queue (Usually after a Yield).
+				
+				PIPRINT(("[PI]: Thread (%d) loose #10 credits\n", current_running_thread->tid));
+				int cred = current_running_thread->credReal;
+				cred = cred-10;
+				current_running_thread->credReal = (cred > 0 ? cred : 0);
+
+				ready_queue_insert(current_running_thread);
 				getcontext(&(current_running_thread->context));
 				break;
+			}
 			case PI_FINISHED:
 				PIPRINT(("[PI] [SC] NOO\n"));
 				break;
 			case PI_BLOCKED: {
 				PIPRINT(("[PI] [SC]: Blocking thread with id: %d\n", current_running_thread->tid));
-				blocked_list_insert(current_running_thread);
 				getcontext(&(current_running_thread->context));
 				break;
 			}
@@ -75,30 +81,6 @@ int run_scheduler() {
 
 
 /*----------------------------------------------------------------------------*/
-/*                                  BLOCKING                                  */
-/*----------------------------------------------------------------------------*/
-
-int thread_block(TCB_t* thread) {
-	if (thread != NULL) {
-		thread->state = PI_BLOCKED;
-		return run_scheduler();
-	} else {
-		return ERROR_CODE;
-	}
-}
-
-void thread_unblock(TCB_t* thread) {
-	if (thread != NULL) {
-		blocked_list_remove(thread);
-		thread->state = PI_READY;
-		ready_active_insert(thread);
-	}
-	run_scheduler();
-}
-
-
-/*----------------------------------------------------------------------------*/
-
 
 void end_thread_execution() {
 
@@ -115,7 +97,17 @@ void end_thread_execution() {
 		// There was a thread waiting for it to finish
 		if (waiting_thread != NULL) {
 			waiting_thread->waiting_for_tid = ERROR_CODE;
-			thread_unblock(waiting_thread);
+			
+			blocked_list_wait_remove(waiting_thread);
+			waiting_thread->state = PI_READY;
+
+			PIPRINT(("[PI]: Thread (%d) receive #20 credits\n", waiting_thread->tid));
+			int cred = waiting_thread->credReal;
+			cred = cred+20;
+			waiting_thread->credReal = (cred < 100 ? cred : 100);
+			
+			ready_queue_insert(waiting_thread);
+			run_scheduler();
 		} else {
 			run_scheduler();
 		}
