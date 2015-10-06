@@ -12,7 +12,6 @@ TCB_queue_t *ready_expired[MAX_THREAD_PRIORITY];
 TCB_queue_t *blocked_list_mutex;
 TCB_queue_t *blocked_list_waiting;
 TCB_waiting_t *blocked_tid_list;
-TCB_t *current_running_thread = NULL;
 
 /*----------------------------------------------------------------------------*/
 void initializeQueue(TCB_queue_t **queue) {
@@ -25,6 +24,7 @@ void initializeQueue(TCB_queue_t **queue) {
     }
 }
 
+/*----------------------------------------------------------------------------*/
 void queue_insert(TCB_queue_t **queue, TCB_t *new_tcb) {
 	 new_tcb->prev = NULL;
 	 new_tcb->next = NULL;
@@ -44,19 +44,36 @@ void queue_insert(TCB_queue_t **queue, TCB_t *new_tcb) {
     }
 }
 
+/*----------------------------------------------------------------------------*/
 void blocked_tid_list_insert(TCB_waiting_t *entry) {
+  entry->next = NULL;
   if(blocked_tid_list == NULL) {
       blocked_tid_list = entry;       
   } else {
     TCB_waiting_t *node = blocked_tid_list;
-    
     while(node->next != NULL) {
       node = node->next;
     }
-    node->next = entry;
+    node->next = entry;   
   }
 }
 
+bool blocked_tid_list_contains(int tid) {
+  if(blocked_tid_list == NULL) {
+      return false;       
+  } else {
+    TCB_waiting_t *node = blocked_tid_list;
+    while(node != NULL) {
+      if (node->waiting_for_thread_id == tid) {
+          return true;
+      }
+      node = node->next;
+    }
+    return false;   
+  }
+}
+
+/*----------------------------------------------------------------------------*/
 void blocked_tid_list_remove(int blocked_id) {
 
   if(blocked_tid_list == NULL) {
@@ -64,7 +81,6 @@ void blocked_tid_list_remove(int blocked_id) {
   } else {
     TCB_waiting_t *node = blocked_tid_list;
     TCB_waiting_t *prev = NULL;
-    
     while(node != NULL) {
         if (node->blocked_thread_id == blocked_id) {
             if (prev == NULL) {
@@ -73,14 +89,15 @@ void blocked_tid_list_remove(int blocked_id) {
                 prev->next = node->next;
             }
             free(node);
+            break;
         }
         prev = node;
         node = node->next;
     }
   }
 }
-/*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*/
 TCB_t* queue_remove(TCB_queue_t *queue) {
  
   if ((queue == NULL) || (queue->start == NULL && queue->end == NULL)) {
@@ -106,6 +123,7 @@ TCB_t* queue_remove(TCB_queue_t *queue) {
     }
 }
 
+/*----------------------------------------------------------------------------*/
 TCB_t* queue_return(TCB_queue_t *queue) {
  
   if ((queue == NULL) || (queue->start == NULL && queue->end == NULL)) {
@@ -119,7 +137,6 @@ TCB_t* queue_return(TCB_queue_t *queue) {
 }
 
 /*----------------------------------------------------------------------------*/
-
 TCB_t* queue_thread_with_id(TCB_queue_t *queue, int thread_id) {
  
   if ((queue == NULL) || (queue->start == NULL && queue->end == NULL)) {
@@ -141,7 +158,7 @@ TCB_t* queue_thread_with_id(TCB_queue_t *queue, int thread_id) {
   }
 }
 
-
+/*----------------------------------------------------------------------------*/
 TCB_t* thread_blocked_waiting_for(int tid) {
 
   if(blocked_tid_list == NULL) {
@@ -158,23 +175,10 @@ TCB_t* thread_blocked_waiting_for(int tid) {
     }
     return NULL;
   }
-
-
-
-
-
-
-
-
-
-
-
 }
 
 /*----------------------------------------------------------------------------*/
-
 void list_remove(TCB_queue_t *list, TCB_t *node) {
-    printf("CHEGOU\n");
     if(node == list->start && node == list->end) {
         list->start = NULL;
         list->end = NULL;
@@ -192,7 +196,6 @@ void list_remove(TCB_queue_t *list, TCB_t *node) {
 }
 
 /*----------------------------------------------------------------------------*/
-
 bool remove_from_list(TCB_queue_t *list, TCB_t *thread) {
 
   if ((list == NULL) || (list->start == NULL && list->end == NULL)) {
@@ -212,8 +215,8 @@ bool remove_from_list(TCB_queue_t *list, TCB_t *thread) {
   }
   return false;
 }
-/*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*/
 bool queue_is_empty(TCB_queue_t *queue) {
   if ((queue == NULL) ||
      (queue->start == NULL && queue->end == NULL)) {
@@ -226,6 +229,7 @@ bool queue_is_empty(TCB_queue_t *queue) {
   }
 }
 
+/*----------------------------------------------------------------------------*/
 bool ready_queue_is_empty() {
   int i;
   for (i = 0; i < MAX_THREAD_PRIORITY; i++) {
@@ -238,7 +242,6 @@ bool ready_queue_is_empty() {
 }
 
 /*----------------------------------------------------------------------------*/
-
 void ready_queue_insert(TCB_t *thread) {
   int newPriority = thread->credReal;
   if (newPriority == 0) {
@@ -254,7 +257,6 @@ void ready_queue_insert(TCB_t *thread) {
 }
 
 /*----------------------------------------------------------------------------*/
-
 void swap_queues() {
   int i;
   for (i = 0; i < MAX_THREAD_PRIORITY; i++) {
@@ -266,7 +268,7 @@ void swap_queues() {
   }
 }
 
-
+/*----------------------------------------------------------------------------*/
 TCB_t* ready_queue_remove_and_return() {
 
 	int top_priority = MAX_THREAD_PRIORITY-1;
@@ -277,7 +279,7 @@ TCB_t* ready_queue_remove_and_return() {
 	}
 
   if (higher_priority_thread == NULL) {
-    printf("[PI] Will swap queues\n");
+    PIPRINT(("[PI] Will swap queues\n"));
     swap_queues();
 
     top_priority = MAX_THREAD_PRIORITY-1;
@@ -289,9 +291,7 @@ TCB_t* ready_queue_remove_and_return() {
 	return higher_priority_thread;
 }
 
-
-
-
+/*----------------------------------------------------------------------------*/
 TCB_t* ready_active_return() {
 	int top_priority = MAX_THREAD_PRIORITY-1;
 	TCB_t *higher_priority_thread = NULL;
@@ -302,14 +302,12 @@ TCB_t* ready_active_return() {
 	return higher_priority_thread;
 }
 /*----------------------------------------------------------------------------*/
-
 void ready_expired_insert(TCB_t *thread) {
 	int priority = thread->credCreate;
 	queue_insert(&ready_expired[priority-1], thread);
 }
 
 /*----------------------------------------------------------------------------*/
-
 bool contains_tid_in_ready_queue(int tid) {
   int i;
 	for (i = 0; i < MAX_THREAD_PRIORITY; i++) {
@@ -321,6 +319,7 @@ bool contains_tid_in_ready_queue(int tid) {
 	return false;
 }
 
+/*----------------------------------------------------------------------------*/
 bool contains_tid_in_blocked_list(int tid) {
 	if (queue_thread_with_id(blocked_list_waiting, tid) != NULL ) {
 		return true;
@@ -330,32 +329,26 @@ bool contains_tid_in_blocked_list(int tid) {
 }
 
 /*----------------------------------------------------------------------------*/
-
 void blocked_list_mutex_insert(TCB_t *thread) {
   queue_insert(&blocked_list_mutex, thread);
 }
 
-
+/*----------------------------------------------------------------------------*/
 void blocked_list_mutex_remove(TCB_t *thread) {
   remove_from_list(blocked_list_mutex, thread);
 }
 
-
+/*----------------------------------------------------------------------------*/
 void blocked_list_wait_insert(TCB_t *thread) {
 	queue_insert(&blocked_list_waiting, thread);
 }
 
 /*----------------------------------------------------------------------------*/
-
 void blocked_list_wait_remove(TCB_t *thread) {
 	remove_from_list(blocked_list_waiting, thread);
 }
 
-
-
 /*----------------------------------------------------------------------------*/
-
-
 void printAllQueues() {
 	printf("\n                            START PRINTING QUEUES:\n");
 	printf("\n-> Ready-Active");
@@ -401,7 +394,8 @@ void printAllQueues() {
 	printf("\nend;\n");
 }
 
-void pf() {
+/*----------------------------------------------------------------------------*/
+void debug_print_foward() {
 	printf("\n");
 	TCB_t *blocked_pointer = NULL;
 	if (blocked_list_waiting != NULL) { blocked_pointer = blocked_list_waiting->start; }
@@ -411,7 +405,8 @@ void pf() {
 	}
 }
 
-void pr() {
+/*----------------------------------------------------------------------------*/
+void debug_print_reversed() {
 	printf("\n");
 	TCB_t *blocked_pointer = NULL;
 	if (blocked_list_waiting != NULL) { blocked_pointer = blocked_list_waiting->end; }
@@ -420,3 +415,5 @@ void pr() {
 		blocked_pointer = blocked_pointer->prev;
 	}
 }
+
+/*----------------------------------------------------------------------------*/

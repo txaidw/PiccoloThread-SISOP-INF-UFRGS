@@ -29,7 +29,7 @@
 #define PI_BLOCKED 3
 #define PI_FINISHED 4
 
-#define PIPRINT(X) printf X
+#define PIPRINT(X) //printf X /* <--- For DEBUG uncommet the print!
 
 /*----------------------------------------------------------------------------*/
 
@@ -45,31 +45,75 @@ typedef struct TCB {
 	struct TCB 	*next; 		// ponteiro para o próximo TCB da lista
 } TCB_t; 
 
+/* Essa struct representa as pilhas de TCBs da biblioteca */
 typedef struct TCB_queue {
   TCB_t* start;
   TCB_t* end;
 } TCB_queue_t;
 
+/* Essa struct representa um nodo de uma fila de TCBs bloqueados da biblioteca */
 typedef struct TCB_waiting {
 	int blocked_thread_id;
 	int waiting_for_thread_id;
 	struct TCB_waiting *next;
 } TCB_waiting_t;
 
-/*----------------------------------------------------------------------------*/
-void queue_insert(TCB_queue_t **queue, TCB_t *new_tcb);
-TCB_t* queue_remove(TCB_queue_t *queue);
-bool ready_active_is_empty();
-void ready_queue_insert(TCB_t *thread);
-TCB_t* ready_queue_remove_and_return();
-TCB_t* ready_active_return();
-void ready_expired_insert(TCB_t *thread);
-TCB_t* thread_blocked_waiting_for(int tid);
-bool contains_tid_in_ready_queue(int tid);
-bool contains_tid_in_blocked_list(int tid);
-void blocked_list_insert(TCB_t *thread);
-void blocked_list_remove(TCB_t *thread);
-void printAllQueues();
-/*----------------------------------------------------------------------------*/
+
 
 #endif
+
+
+/*----------------------------------------------------------------------------*/
+void initializeQueue(TCB_queue_t **queue);
+/*----------------------------------------------------------------------------*/
+void queue_insert(TCB_queue_t **queue, TCB_t *new_tcb);
+/*----------------------------------------------------------------------------*/
+void blocked_tid_list_insert(TCB_waiting_t *entry);
+/*----------------------------------------------------------------------------*/
+void blocked_tid_list_remove(int blocked_id);
+/*----------------------------------------------------------------------------*/
+bool blocked_tid_list_contains(int tid);
+/*----------------------------------------------------------------------------*/
+TCB_t* queue_remove(TCB_queue_t *queue);
+/*----------------------------------------------------------------------------*/
+TCB_t* queue_return(TCB_queue_t *queue);
+/*----------------------------------------------------------------------------*/
+TCB_t* queue_thread_with_id(TCB_queue_t *queue, int thread_id);
+/*----------------------------------------------------------------------------*/
+TCB_t* thread_blocked_waiting_for(int tid);
+/*----------------------------------------------------------------------------*/
+void list_remove(TCB_queue_t *list, TCB_t *node);
+/*----------------------------------------------------------------------------*/
+bool remove_from_list(TCB_queue_t *list, TCB_t *thread);
+/*----------------------------------------------------------------------------*/
+bool queue_is_empty(TCB_queue_t *queue);
+/*----------------------------------------------------------------------------*/
+bool ready_queue_is_empty();
+/*----------------------------------------------------------------------------*/
+void ready_queue_insert(TCB_t *thread);
+/*----------------------------------------------------------------------------*/
+void swap_queues();
+/*----------------------------------------------------------------------------*/
+TCB_t* ready_queue_remove_and_return();
+/*----------------------------------------------------------------------------*/
+TCB_t* ready_active_return();
+/*----------------------------------------------------------------------------*/
+void ready_expired_insert(TCB_t *thread);
+/*----------------------------------------------------------------------------*/
+bool contains_tid_in_ready_queue(int tid);
+/*----------------------------------------------------------------------------*/
+bool contains_tid_in_blocked_list(int tid);
+/*----------------------------------------------------------------------------*/
+void blocked_list_mutex_insert(TCB_t *thread);
+/*----------------------------------------------------------------------------*/
+void blocked_list_mutex_remove(TCB_t *thread);
+/*----------------------------------------------------------------------------*/
+void blocked_list_wait_insert(TCB_t *thread);
+/*----------------------------------------------------------------------------*/
+void blocked_list_wait_remove(TCB_t *thread);
+/*----------------------------------------------------------------------------*/
+void printAllQueues();
+/*----------------------------------------------------------------------------*/
+void debug_print_foward();
+/*----------------------------------------------------------------------------*/
+void debug_print_reversed();

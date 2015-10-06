@@ -5,10 +5,13 @@
 CC=gcc
 LIB_DIR=../lib
 
-all: teste_mutex
+all: teste1 teste2
 
-teste_mutex: teste_mutex.c $(LIB_DIR)/libpithread.a
-	$(CC) -o teste_mutex teste_mutex.c -L$(LIB_DIR) -lpithread -Wall
+teste1: teste1.c $(LIB_DIR)/libpithread.a
+	$(CC) -o teste1 teste1.c -L$(LIB_DIR) -lpithread -Wall
+
+teste2: teste2.c $(LIB_DIR)/libpithread.a
+	$(CC) -o teste2 teste2.c -L$(LIB_DIR) -lpithread -Wall
 
 clean:
-	rm -rf teste_mutex *~
+	rm -rf teste1 teste2 *~
